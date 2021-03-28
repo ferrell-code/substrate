@@ -209,16 +209,13 @@ impl<K1, K2, K3, V, G> storage::StorageTripleMap<K1, K2, K3, V> for G where
     }
     
     //last key becomes first and bumps the rest up 
-	fn swap<XKArg1, XKArg2, XKArg3, YKArg1, YKArg2, YKArg3, ZKArg1, ZKArg2, ZKArg3>(
+	fn swap<XKArg1, XKArg2, XKArg3, YKArg1, YKArg2, YKArg3>(
 		x_k1: XKArg1,
         x_k2: XKArg2,
         x_k3: XKArg3,
 		y_k1: YKArg1,
         y_k2: YKArg2,
-        y_k3: YKArg3,
-        z_k1: ZKArg1,
-        z_k2: ZKArg2,
-        z_k3: ZKArg3,
+        y_k3: YKArg3,       
 	) where
 		XKArg1: EncodeLike<K1>,
         XKArg2: EncodeLike<K2>,
@@ -226,17 +223,12 @@ impl<K1, K2, K3, V, G> storage::StorageTripleMap<K1, K2, K3, V> for G where
 		YKArg1: EncodeLike<K1>,
         YKArg2: EncodeLike<K2>,
         YKArg3: EncodeLike<K3>,
-        ZKArg1: EncodeLike<K1>,
-        ZKArg2: EncodeLike<K2>,
-        ZKArg3: EncodeLike<K3>,
 	{
 		let final_x_key = Self::storage_triple_map_final_key(x_k1, x_k2, x_k3);
-        let final_y_key = Self::storage_triple_map_final_key(y_k1, y_k2, y_k3);
-        let final_z_key = Self::storage_triple_map_final_key(z_k1, z_k2, z_k3);
-
-        let v1 = unhashed::get_raw(&final_x_key);
-        let v2 = unhashed::get_raw(&final_y_key);
-		if let Some(val) = unhashed::get_raw(&final_z_key) {
+		let final_y_key = Self::storage_triple_map_final_key(y_k1, y_k2, y_k3);
+		
+		let v1 = unhashed::get_raw(&final_x_key);
+		if let Some(val) = unhashed::get_raw(&final_y_key) {
 			unhashed::put_raw(&final_x_key, &val);
 		} else {
 			unhashed::kill(&final_x_key)
@@ -245,13 +237,7 @@ impl<K1, K2, K3, V, G> storage::StorageTripleMap<K1, K2, K3, V> for G where
 			unhashed::put_raw(&final_y_key, &val);
 		} else {
 			unhashed::kill(&final_y_key)
-        }
-        if let Some(val) = v2 {
-            unhashed::put_raw(&final_z_key, &val);
-		} else {
-			unhashed::kill(&final_z_key)
-        }
-        
+		}
 	}
 
 	fn insert<KArg1, KArg2, KArg3, VArg>(k1: KArg1, k2: KArg2, k3: KArg3, val: VArg) where
@@ -412,6 +398,7 @@ impl<
     G::Hasher3: ReversibleStorageHasher,
 {
 	type PrefixIterator = PrefixIterator<(K3, V)>;
+	//type MiddleIterator = MiddleIterator<(K2, K3, V)>;
 	type Iterator = PrefixIterator<(K1, K2, K3, V)>;
 
 	fn iter_prefix(k1: impl EncodeLike<K1>) -> Self::PrefixIterator {
@@ -506,6 +493,7 @@ impl<
 	}
 }
 
+/*
 /// Test iterators for StorageDoubleMap
 #[cfg(test)]
 mod test_iterators {
@@ -650,3 +638,4 @@ mod test_iterators {
 		})
 	}
 }
+*/

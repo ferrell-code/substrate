@@ -515,6 +515,9 @@ pub trait IterableStorageTripleMap<
 	/// The type that iterates over all `(key3, value)`.
 	type PrefixIterator: Iterator<Item = (K3, V)>;
 
+	/// The type that iterates over all '`(key2, key3, value)`.
+	//type MiddleIterator: Iterator<Item = (K2, K3, V)>;
+
 	/// The type that iterates over all `(key1, key2, value)`.
 	type Iterator: Iterator<Item = (K1, K2, K3, V)>;
 
@@ -540,7 +543,7 @@ pub trait IterableStorageTripleMap<
 	/// By returning `None` from `f` for an element, you'll remove it from the map.
 	///
 	/// NOTE: If a value fail to decode because storage is corrupted then it is skipped.
-	fn translate<O: Decode, F: FnMut(K1, K2, O) -> Option<V>>(f: F);
+	fn translate<O: Decode, F: FnMut(K1, K2, K3, O) -> Option<V>>(f: F);
 }
 
 /// An implementation of a map with a two keys.
@@ -591,20 +594,16 @@ pub trait StorageTripleMap<K1: FullEncode, K2: FullEncode, K3: FullEncode, V: Fu
 		KArg3: EncodeLike<K3>;
 
 	/// Swap the values of two key-pairs.
-	fn swap<XKArg1, XKArg2, XKArg3, YKArg1, YKArg2, YKArg3, ZKArg1, ZKArg2, ZKArg3>(
+	fn swap<XKArg1, XKArg2, XKArg3, YKArg1, YKArg2, YKArg3>(
 		x_k1: XKArg1, x_k2: XKArg2, x_k3: XKArg3, 
-		y_k1: YKArg1, y_k2: YKArg2, y_k3: YKArg3, 
-		z_k1: ZKArg1, z_k2: ZKArg2, z_k3: ZKArg3
+		y_k1: YKArg1, y_k2: YKArg2, y_k3: YKArg3
 	) where
 		XKArg1: EncodeLike<K1>,
 		XKArg2: EncodeLike<K2>,
 		XKArg3: EncodeLike<K3>,
 		YKArg1: EncodeLike<K1>,
 		YKArg2: EncodeLike<K2>,
-		YKArg3: EncodeLike<K3>,
-		ZKArg1: EncodeLike<K1>,
-		ZKArg2: EncodeLike<K2>,
-		ZKArg3: EncodeLike<K3>;
+		YKArg3: EncodeLike<K3>;
 
 	/// Store a value to be associated with the given keys from the double map.
 	fn insert<KArg1, KArg2, KArg3, VArg>(k1: KArg1, k2: KArg2, k3: KArg3, val: VArg)

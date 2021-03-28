@@ -24,10 +24,12 @@ use frame_metadata::{DefaultByte, StorageEntryModifier};
 mod value;
 mod map;
 mod double_map;
+mod triple_map;
 
 pub use value::{StorageValue, StorageValueMetadata};
 pub use map::{StorageMap, StorageMapMetadata};
 pub use double_map::{StorageDoubleMap, StorageDoubleMapMetadata};
+pub use triple_map::{StorageTripleMap, StorageTripleMapMetadata};
 
 /// Trait implementing how the storage optional value is converted into the queried type.
 ///

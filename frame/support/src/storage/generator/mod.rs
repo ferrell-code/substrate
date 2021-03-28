@@ -27,9 +27,11 @@
 mod map;
 mod double_map;
 mod value;
+mod triple_map;
 
 pub use map::StorageMap;
 pub use double_map::StorageDoubleMap;
+pub use triple_map::StorageTripleMap;
 pub use value::StorageValue;
 
 #[cfg(test)]

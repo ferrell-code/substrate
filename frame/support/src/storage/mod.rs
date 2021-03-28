@@ -505,6 +505,218 @@ pub trait StorageDoubleMap<K1: FullEncode, K2: FullEncode, V: FullCodec> {
 		KeyArg2: EncodeLike<K2>,
 	>(key1: KeyArg1, key2: KeyArg2) -> Option<V>;
 }
+/// A strongly-typed double map in storage whose secondary keys and values can be iterated over.
+pub trait IterableStorageTripleMap<
+	K1: FullCodec,
+	K2: FullCodec,
+	K3: FullCodec,
+	V: FullCodec,
+>: StorageTripleMap<K1, K2, K3, V> {
+	/// The type that iterates over all `(key3, value)`.
+	type PrefixIterator: Iterator<Item = (K3, V)>;
+
+	/// The type that iterates over all `(key1, key2, value)`.
+	type Iterator: Iterator<Item = (K1, K2, K3, V)>;
+
+	/// Enumerate all elements in the map with first key `k1` in no particular order. If you add or
+	/// remove values whose first key is `k1` to the map while doing this, you'll get undefined
+	/// results.
+	fn iter_prefix(k1: impl EncodeLike<K1>) -> Self::PrefixIterator;
+
+	/// Remove all elements from the map with first key `k1` and iterate through them in no
+	/// particular order. If you add elements with first key `k1` to the map while doing this,
+	/// you'll get undefined results.
+	fn drain_prefix(k1: impl EncodeLike<K1>) -> Self::PrefixIterator;
+
+	/// Enumerate all elements in the map in no particular order. If you add or remove values to
+	/// the map while doing this, you'll get undefined results.
+	fn iter() -> Self::Iterator;
+
+	/// Remove all elements from the map and iterate through them in no particular order. If you
+	/// add elements to the map while doing this, you'll get undefined results.
+	fn drain() -> Self::Iterator;
+
+	/// Translate the values of all elements by a function `f`, in the map in no particular order.
+	/// By returning `None` from `f` for an element, you'll remove it from the map.
+	///
+	/// NOTE: If a value fail to decode because storage is corrupted then it is skipped.
+	fn translate<O: Decode, F: FnMut(K1, K2, O) -> Option<V>>(f: F);
+}
+
+/// An implementation of a map with a two keys.
+///
+/// It provides an important ability to efficiently remove all entries
+/// that have a common first key.
+///
+/// Details on implementation can be found at [`generator::StorageDoubleMap`].
+pub trait StorageTripleMap<K1: FullEncode, K2: FullEncode, K3: FullEncode, V: FullCodec> {
+	/// The type that get/take returns.
+	type Query;
+
+	/// Get the storage key used to fetch a value corresponding to a specific key.
+	fn hashed_key_for<KArg1, KArg2, KArg3>(k1: KArg1, k2: KArg2, k3: KArg3) -> Vec<u8>
+	where
+		KArg1: EncodeLike<K1>,
+		KArg2: EncodeLike<K2>,
+		KArg3: EncodeLike<K3>;
+
+	/// Does the value (explicitly) exist in storage?
+	fn contains_key<KArg1, KArg2, KArg3>(k1: KArg1, k2: KArg2, k3: KArg3) -> bool
+	where
+		KArg1: EncodeLike<K1>,
+		KArg2: EncodeLike<K2>,
+		KArg3: EncodeLike<K3>;
+
+	/// Load the value associated with the given key from the double map.
+	fn get<KArg1, KArg2, KArg3>(k1: KArg1, k2: KArg2, k3: KArg3) -> Self::Query
+	where
+		KArg1: EncodeLike<K1>,
+		KArg2: EncodeLike<K2>,
+		KArg3: EncodeLike<K3>;
+
+	/// Try to get the value for the given key from the double map.
+	///
+	/// Returns `Ok` if it exists, `Err` if not.
+	fn try_get<KArg1, KArg2, KArg3>(k1: KArg1, k2: KArg2, k3: KArg3) -> Result<V, ()>
+	where
+		KArg1: EncodeLike<K1>,
+		KArg2: EncodeLike<K2>,
+		KArg3: EncodeLike<K3>;
+
+	/// Take a value from storage, removing it afterwards.
+	fn take<KArg1, KArg2, KArg3>(k1: KArg1, k2: KArg2, k3: KArg3) -> Self::Query
+	where
+		KArg1: EncodeLike<K1>,
+		KArg2: EncodeLike<K2>,
+		KArg3: EncodeLike<K3>;
+
+	/// Swap the values of two key-pairs.
+	fn swap<XKArg1, XKArg2, XKArg3, YKArg1, YKArg2, YKArg3, ZKArg1, ZKArg2, ZKArg3>(
+		x_k1: XKArg1, x_k2: XKArg2, x_k3: XKArg3, 
+		y_k1: YKArg1, y_k2: YKArg2, y_k3: YKArg3, 
+		z_k1: ZKArg1, z_k2: ZKArg2, z_k3: ZKArg3
+	) where
+		XKArg1: EncodeLike<K1>,
+		XKArg2: EncodeLike<K2>,
+		XKArg3: EncodeLike<K3>,
+		YKArg1: EncodeLike<K1>,
+		YKArg2: EncodeLike<K2>,
+		YKArg3: EncodeLike<K3>,
+		ZKArg1: EncodeLike<K1>,
+		ZKArg2: EncodeLike<K2>,
+		ZKArg3: EncodeLike<K3>;
+
+	/// Store a value to be associated with the given keys from the double map.
+	fn insert<KArg1, KArg2, KArg3, VArg>(k1: KArg1, k2: KArg2, k3: KArg3, val: VArg)
+	where
+		KArg1: EncodeLike<K1>,
+		KArg2: EncodeLike<K2>,
+		KArg3: EncodeLike<K3>,
+		VArg: EncodeLike<V>;
+
+	/// Remove the value under the given keys.
+	fn remove<KArg1, KArg2, KArg3>(k1: KArg1, k2: KArg2, k3: KArg3)
+	where
+		KArg1: EncodeLike<K1>,
+		KArg2: EncodeLike<K2>,
+		KArg3: EncodeLike<K3>;
+
+	/// Remove all values under the first key.
+	fn remove_prefix<KArg1>(k1: KArg1) where KArg1: ?Sized + EncodeLike<K1>;
+
+	/// Iterate over values that share the first key.
+	fn iter_prefix_values<KArg1>(k1: KArg1) -> PrefixIterator<V>
+		where KArg1: ?Sized + EncodeLike<K1>;
+
+	/// Mutate the value under the given keys.
+	fn mutate<KArg1, KArg2, KArg3, R, F>(k1: KArg1, k2: KArg2, k3: KArg3, f: F) -> R
+	where
+		KArg1: EncodeLike<K1>,
+		KArg2: EncodeLike<K2>,
+		KArg3: EncodeLike<K3>,
+		F: FnOnce(&mut Self::Query) -> R;
+
+	/// Mutate the value under the given keys when the closure returns `Ok`.
+	fn try_mutate<KArg1, KArg2, KArg3, R, E, F>(k1: KArg1, k2: KArg2, k3: KArg3, f: F) -> Result<R, E>
+	where
+		KArg1: EncodeLike<K1>,
+		KArg2: EncodeLike<K2>,
+		KArg3: EncodeLike<K3>,
+		F: FnOnce(&mut Self::Query) -> Result<R, E>;
+
+	/// Mutate the value under the given keys. Deletes the item if mutated to a `None`.
+	fn mutate_exists<KArg1, KArg2, KArg3, R, F>(k1: KArg1, k2: KArg2, k3: KArg3, f: F) -> R
+	where
+		KArg1: EncodeLike<K1>,
+		KArg2: EncodeLike<K2>,
+		KArg3: EncodeLike<K3>,
+		F: FnOnce(&mut Option<V>) -> R;
+
+	/// Mutate the item, only if an `Ok` value is returned. Deletes the item if mutated to a `None`.
+	fn try_mutate_exists<KArg1, KArg2, KArg3, R, E, F>(k1: KArg1, k2: KArg2, k3: KArg3, f: F) -> Result<R, E>
+	where
+		KArg1: EncodeLike<K1>,
+		KArg2: EncodeLike<K2>,
+		KArg3: EncodeLike<K3>,
+		F: FnOnce(&mut Option<V>) -> Result<R, E>;
+
+	/// Append the given item to the value in the storage.
+	///
+	/// `V` is required to implement [`StorageAppend`].
+	///
+	/// # Warning
+	///
+	/// If the storage item is not encoded properly, the storage will be overwritten
+	/// and set to `[item]`. Any default value set for the storage item will be ignored
+	/// on overwrite.
+	fn append<Item, EncodeLikeItem, KArg1, KArg2, KArg3>(
+		k1: KArg1,
+		k2: KArg2,
+		k3: KArg3,
+		item: EncodeLikeItem,
+	) where
+		KArg1: EncodeLike<K1>,
+		KArg2: EncodeLike<K2>,
+		KArg3: EncodeLike<K3>,
+		Item: Encode,
+		EncodeLikeItem: EncodeLike<Item>,
+		V: StorageAppend<Item>;
+
+	/// Read the length of the storage value without decoding the entire value under the
+	/// given `key1` and `key2`.
+	///
+	/// `V` is required to implement [`StorageDecodeLength`].
+	///
+	/// If the value does not exists or it fails to decode the length, `None` is returned.
+	/// Otherwise `Some(len)` is returned.
+	///
+	/// # Warning
+	///
+	/// `None` does not mean that `get()` does not return a value. The default value is completly
+	/// ignored by this function.
+	fn decode_len<KArg1, KArg2, KArg3>(key1: KArg1, key2: KArg2, key3: KArg3) -> Option<usize>
+		where
+			KArg1: EncodeLike<K1>,
+			KArg2: EncodeLike<K2>,
+			KArg3: EncodeLike<K3>,
+			V: StorageDecodeLength,
+	{
+		V::decode_len(&Self::hashed_key_for(key1, key2, key3))
+	}
+
+	/// Migrate an item with the given `key1` and `key2` from defunct `OldHasher1` and
+	/// `OldHasher2` to the current hashers.
+	///
+	/// If the key doesn't exist, then it's a no-op. If it does, then it returns its value.
+	fn migrate_keys<
+		OldHasher1: StorageHasher,
+		OldHasher2: StorageHasher,
+		OldHasher3: StorageHasher,
+		KeyArg1: EncodeLike<K1>,
+		KeyArg2: EncodeLike<K2>,
+		KeyArg3: EncodeLike<K3>,
+	>(key1: KeyArg1, key2: KeyArg2, key3: KeyArg3) -> Option<V>;
+}
 
 /// Iterate over a prefix and decode raw_key and raw_value into `T`.
 ///

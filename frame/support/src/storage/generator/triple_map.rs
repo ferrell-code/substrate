@@ -208,7 +208,6 @@ impl<K1, K2, K3, V, G> storage::StorageTripleMap<K1, K2, K3, V> for G where
 		G::from_optional_value_to_query(value)
     }
     
-    //last key becomes first and bumps the rest up 
 	fn swap<XKArg1, XKArg2, XKArg3, YKArg1, YKArg2, YKArg3>(
 		x_k1: XKArg1,
         x_k2: XKArg2,
@@ -397,13 +396,27 @@ impl<
     G::Hasher2: ReversibleStorageHasher,
     G::Hasher3: ReversibleStorageHasher,
 {
-	type PrefixIterator = PrefixIterator<(K3, V)>;
-	//type MiddleIterator = MiddleIterator<(K2, K3, V)>;
+	type PrefixIterator1 = PrefixIterator<(K2, K3, V)>;
+	type PrefixIterator2 = PrefixIterator<(K3, V)>;
 	type Iterator = PrefixIterator<(K1, K2, K3, V)>;
 
-	fn iter_prefix(k1: impl EncodeLike<K1>) -> Self::PrefixIterator {
+	fn iter_prefix(k1: impl EncodeLike<K1>) -> Self::PrefixIterator1 {
 		let prefix = G::storage_triple_map_final_key1(k1);
-		Self::PrefixIterator {
+		Self::PrefixIterator1 {
+			prefix: prefix.clone(),
+			previous_key: prefix,
+			drain: false,
+			closure: |raw_key_without_prefix, mut raw_value| {
+				let mut key_material3 = G::Hasher3::reverse(raw_key_without_prefix);
+				let mut key_material2 = G::Hasher2::reverse(raw_key_without_prefix);
+				Ok((K2::decode(&mut key_material2)?, K3::decode(&mut key_material3)?, V::decode(&mut raw_value)?))
+			},
+		}
+	}
+
+fn iter_prefix_2key(k1: impl EncodeLike<K1>, k2: impl EncodeLike<K2>) -> Self::PrefixIterator2 {
+		let prefix = G::storage_triple_map_final_key2(k1, k2);
+		Self::PrefixIterator2 {
 			prefix: prefix.clone(),
 			previous_key: prefix,
 			drain: false,
@@ -414,8 +427,8 @@ impl<
 		}
 	}
 
-	fn drain_prefix(k1: impl EncodeLike<K1>) -> Self::PrefixIterator {
-		let mut iterator = Self::iter_prefix(k1);
+	fn drain_prefix(k1: impl EncodeLike<K1>, k2: impl EncodeLike<K2>) -> Self::PrefixIterator2 {
+		let mut iterator = Self::iter_prefix_2key(k1, k2);
 		iterator.drain = true;
 		iterator
 	}
@@ -541,11 +554,11 @@ mod test_iterators {
 	fn double_map_reversible_reversible_iteration() {
 		sp_io::TestExternalities::default().execute_with(|| {
 			// All map iterator
-			let prefix = DoubleMap::prefix_hash();
+			let prefix = TripleMap::prefix_hash();
 
 			unhashed::put(&key_before_prefix(prefix.clone()), &1u64);
 			unhashed::put(&key_after_prefix(prefix.clone()), &1u64);
-
+			
 			for i in 0..4 {
 				DoubleMap::insert(i as u16, i as u32, i as u64);
 			}
@@ -637,5 +650,4 @@ mod test_iterators {
 			);
 		})
 	}
-}
-*/
+}*/

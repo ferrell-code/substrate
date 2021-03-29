@@ -378,8 +378,12 @@ where
 	///
 	/// If you add or remove values whose first key is `k1` to the map while doing this, you'll get
 	/// undefined results.
-	pub fn iter_prefix(k1: impl EncodeLike<Key1>) -> crate::storage::PrefixIterator<(Key3, Value)> {
+	pub fn iter_prefix(k1: impl EncodeLike<Key1>) -> crate::storage::PrefixIterator<(Key2, Key3, Value)> {
 		<Self as crate::storage::IterableStorageTripleMap<Key1, Key2, Key3, Value>>::iter_prefix(k1)
+	}
+
+	pub fn iter_prefix_2key(k1: impl EncodeLike<Key1>, k2: impl EncodeLike<Key2>) -> crate::storage::PrefixIterator<(Key3, Value)> {
+		<Self as crate::storage::IterableStorageTripleMap<Key1, Key2, Key3, Value>>::iter_prefix_2key(k1, k2)
 	}
 
 	/// Remove all elements from the map with first key `k1` and iterate through them in no
@@ -387,8 +391,8 @@ where
 	///
 	/// If you add elements with first key `k1` to the map while doing this, you'll get undefined
 	/// results.
-	pub fn drain_prefix(k1: impl EncodeLike<Key1>) -> crate::storage::PrefixIterator<(Key3, Value)> {
-		<Self as crate::storage::IterableStorageTripleMap<Key1, Key2, Key3, Value>>::drain_prefix(k1)
+	pub fn drain_prefix(k1: impl EncodeLike<Key1>, k2: impl EncodeLike<Key2>) -> crate::storage::PrefixIterator<(Key3, Value)> {
+		<Self as crate::storage::IterableStorageTripleMap<Key1, Key2, Key3, Value>>::drain_prefix(k1, k2)
 	}
 
 	/// Enumerate all elements in the map in no particular order.
@@ -631,20 +635,20 @@ mod test {
 			assert_eq!(WithLen::decode_len(3, 30, 33), None);
 			WithLen::append(0, 50, 100, 10);
 			assert_eq!(WithLen::decode_len(0, 50, 100), Some(1));
-
+			
 			A::insert(3, 30, 33, 11);
-			A::insert(3, 31, 34, 12);
+			A::insert(3, 30, 34, 12);
 			A::insert(4, 40, 44, 13);
-			A::insert(4, 41, 45, 14);
+			A::insert(4, 40, 45, 14);
 			assert_eq!(A::iter_prefix_values(3).collect::<Vec<_>>(), vec![12, 11]);
-			assert_eq!(A::iter_prefix(3).collect::<Vec<_>>(), vec![(31, 12), (30, 11)]);
+			assert_eq!(A::iter_prefix_2key(3, 30).collect::<Vec<_>>(), vec![(34, 12), (33,11)]);
 			assert_eq!(A::iter_prefix_values(4).collect::<Vec<_>>(), vec![13, 14]);
-			assert_eq!(A::iter_prefix(4).collect::<Vec<_>>(), vec![(40, 13), (41, 14)]);
-/*
-			A::remove_prefix(3);
-			assert_eq!(A::iter_prefix(3).collect::<Vec<_>>(), vec![]);
-			assert_eq!(A::iter_prefix(4).collect::<Vec<_>>(), vec![(40, 13), (41, 14)]);
+			assert_eq!(A::iter_prefix_2key(4, 40).collect::<Vec<_>>(), vec![(44, 13), (45, 14)]);
 
+			A::remove_prefix(3);
+			assert_eq!(A::iter_prefix_2key(3, 30).collect::<Vec<_>>(), vec![]);
+			assert_eq!(A::iter_prefix_2key(4, 40).collect::<Vec<_>>(), vec![(44, 13), (45, 14)]);
+/*
 			assert_eq!(A::drain_prefix(4).collect::<Vec<_>>(), vec![(40, 13), (41, 14)]);
 			assert_eq!(A::iter_prefix(4).collect::<Vec<_>>(), vec![]);
 			assert_eq!(A::drain_prefix(4).collect::<Vec<_>>(), vec![]);A::swap(3, 30, 2, 20);
@@ -654,45 +658,45 @@ mod test {
 			assert_eq!(AValueQueryWithAnOnEmpty::get(3, 30), 97);
 			assert_eq!(A::get(2, 20), Some(10));
 			assert_eq!(AValueQueryWithAnOnEmpty::get(2, 20), 10);
+*/
+			A::remove(2, 20, 22);
+			assert_eq!(A::contains_key(2, 20, 22), false);
+			assert_eq!(A::get(2, 20, 22), None);
 
-			A::remove(2, 20);
-			assert_eq!(A::contains_key(2, 20), false);
-			assert_eq!(A::get(2, 20), None);
+			AValueQueryWithAnOnEmpty::mutate(2, 20, 22, |v| *v = *v * 2);
+			AValueQueryWithAnOnEmpty::mutate(2, 20, 22, |v| *v = *v * 2);
+			assert_eq!(A::contains_key(2, 20, 22), true);
+			assert_eq!(A::get(2, 20, 22), Some(97 * 4));
 
-			AValueQueryWithAnOnEmpty::mutate(2, 20, |v| *v = *v * 2);
-			AValueQueryWithAnOnEmpty::mutate(2, 20, |v| *v = *v * 2);
-			assert_eq!(A::contains_key(2, 20), true);
-			assert_eq!(A::get(2, 20), Some(97 * 4));
-
-			A::remove(2, 20);
-			let _: Result<(), ()> = AValueQueryWithAnOnEmpty::try_mutate(2, 20, |v| {
+			A::remove(2, 20, 22);
+			let _: Result<(), ()> = AValueQueryWithAnOnEmpty::try_mutate(2, 20, 22, |v| {
 				*v = *v * 2; Ok(())
 			});
-			let _: Result<(), ()> = AValueQueryWithAnOnEmpty::try_mutate(2, 20, |v| {
+			let _: Result<(), ()> = AValueQueryWithAnOnEmpty::try_mutate(2, 20, 22, |v| {
 				*v = *v * 2; Ok(())
 			});
-			assert_eq!(A::contains_key(2, 20), true);
-			assert_eq!(A::get(2, 20), Some(97 * 4));
+			assert_eq!(A::contains_key(2, 20, 22), true);
+			assert_eq!(A::get(2, 20, 22), Some(97 * 4));
 
-			A::remove(2, 20);
-			let _: Result<(), ()> = AValueQueryWithAnOnEmpty::try_mutate(2, 20, |v| {
+			A::remove(2, 20, 22);
+			let _: Result<(), ()> = AValueQueryWithAnOnEmpty::try_mutate(2, 20, 22, |v| {
 				*v = *v * 2; Err(())
 			});
-			assert_eq!(A::contains_key(2, 20), false);
+			assert_eq!(A::contains_key(2, 20, 22), false);
 
-			A::remove(2, 20);
-			AValueQueryWithAnOnEmpty::mutate_exists(2, 20, |v| {
+			A::remove(2, 20, 22);
+			AValueQueryWithAnOnEmpty::mutate_exists(2, 20, 22, |v| {
 				assert!(v.is_none());
 				*v = Some(10);
 			});
-			assert_eq!(A::contains_key(2, 20), true);
-			assert_eq!(A::get(2, 20), Some(10));
-			AValueQueryWithAnOnEmpty::mutate_exists(2, 20, |v| {
+			assert_eq!(A::contains_key(2, 20, 22), true);
+			assert_eq!(A::get(2, 20, 22), Some(10));
+			AValueQueryWithAnOnEmpty::mutate_exists(2, 20, 22, |v| {
 				*v = Some(v.unwrap() * 10);
 			});
-			assert_eq!(A::contains_key(2, 20), true);
-			assert_eq!(A::get(2, 20), Some(100));
-
+			assert_eq!(A::contains_key(2, 20, 22), true);
+			assert_eq!(A::get(2, 20, 22), Some(100));
+/*
 			A::remove(2, 20);
 			let _: Result<(), ()> = AValueQueryWithAnOnEmpty::try_mutate_exists(2, 20, |v| {
 				assert!(v.is_none());

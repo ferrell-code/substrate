@@ -513,10 +513,10 @@ pub trait IterableStorageTripleMap<
 	V: FullCodec,
 >: StorageTripleMap<K1, K2, K3, V> {
 	/// The type that iterates over all `(key3, value)`.
-	type PrefixIterator: Iterator<Item = (K3, V)>;
+	type PrefixIterator1: Iterator<Item = (K2 ,K3, V)>;
 
 	/// The type that iterates over all '`(key2, key3, value)`.
-	//type MiddleIterator: Iterator<Item = (K2, K3, V)>;
+	type PrefixIterator2: Iterator<Item = (K3, V)>;
 
 	/// The type that iterates over all `(key1, key2, value)`.
 	type Iterator: Iterator<Item = (K1, K2, K3, V)>;
@@ -524,12 +524,15 @@ pub trait IterableStorageTripleMap<
 	/// Enumerate all elements in the map with first key `k1` in no particular order. If you add or
 	/// remove values whose first key is `k1` to the map while doing this, you'll get undefined
 	/// results.
-	fn iter_prefix(k1: impl EncodeLike<K1>) -> Self::PrefixIterator;
+	fn iter_prefix(k1: impl EncodeLike<K1>) -> Self::PrefixIterator1;
+
+	///Enumerate elements
+	fn iter_prefix_2key(k1: impl EncodeLike<K1>, k2: impl EncodeLike<K2>) -> Self::PrefixIterator2;
 
 	/// Remove all elements from the map with first key `k1` and iterate through them in no
 	/// particular order. If you add elements with first key `k1` to the map while doing this,
 	/// you'll get undefined results.
-	fn drain_prefix(k1: impl EncodeLike<K1>) -> Self::PrefixIterator;
+	fn drain_prefix(k1: impl EncodeLike<K1>, k2: impl EncodeLike<K2>) -> Self::PrefixIterator2;
 
 	/// Enumerate all elements in the map in no particular order. If you add or remove values to
 	/// the map while doing this, you'll get undefined results.

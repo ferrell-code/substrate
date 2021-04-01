@@ -213,6 +213,7 @@ impl frame_system::Config for Runtime {
 	type OnKilledAccount = ();
 	type SystemWeightInfo = frame_system::weights::SubstrateWeight<Runtime>;
 	type SS58Prefix = SS58Prefix;
+	type OnSetCode = ();
 }
 
 impl pallet_utility::Config for Runtime {
@@ -1045,6 +1046,8 @@ impl pallet_assets::Config for Runtime {
 	type MetadataDepositPerByte = MetadataDepositPerByte;
 	type ApprovalDeposit = ApprovalDeposit;
 	type StringLimit = StringLimit;
+	type Freezer = ();
+	type Extra = ();
 	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
 }
 

@@ -24,8 +24,7 @@ use super::*;
 use std::cell::RefCell;
 use frame_support::{
 	assert_noop, assert_ok, parameter_types,
-	weights::Weight, traits::SortedMembers,
-	PalletId, pallet_prelude::GenesisBuild,
+	traits::SortedMembers, PalletId,
 };
 use sp_runtime::Permill;
 use sp_core::H256;
@@ -37,6 +36,7 @@ use sp_runtime::{
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
+use super::Event as TipsEvent;
 
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -173,13 +173,13 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	t.into()
 }
 
-fn last_event<T: Config>() -> Event {
-	System::events().into_iter().map(|r| r.event)
+fn last_event() -> Event {
+	system::Pallet::<Test>::events().into_iter().map(|r| r.event)
 		.filter_map(|e| {
 			if let Event::TipsModTestInst(inner) = e { Some(inner) } else { None }
 		})
 		.last()
-		.unwrap()
+		.unwrap().into()
 }
 
 #[test]
@@ -263,7 +263,7 @@ fn close_tip_works() {
 
 		let h = tip_hash();
 
-		assert_eq!(last_event(), RawEvent::NewTip(h));
+		assert_eq!(last_event(), TipsEvent::NewTip(h).into());
 
 		assert_ok!(TipsModTestInst::tip(Origin::signed(11), h.clone(), 10));
 
@@ -271,7 +271,7 @@ fn close_tip_works() {
 
 		assert_ok!(TipsModTestInst::tip(Origin::signed(12), h.clone(), 10));
 
-		assert_eq!(last_event(), RawEvent::TipClosing(h));
+		assert_eq!(last_event(), TipsEvent::TipClosing(h).into());
 
 		assert_noop!(TipsModTestInst::close_tip(Origin::signed(0), h.into()), Error::<Test>::Premature);
 
@@ -280,7 +280,7 @@ fn close_tip_works() {
 		assert_ok!(TipsModTestInst::close_tip(Origin::signed(0), h.into()));
 		assert_eq!(Balances::free_balance(3), 10);
 
-		assert_eq!(last_event(), RawEvent::TipClosed(h, 3, 10));
+		assert_eq!(last_event(), TipsEvent::TipClosed(h, 3, 10).into());
 
 		assert_noop!(TipsModTestInst::close_tip(Origin::signed(100), h.into()), Error::<Test>::UnknownTip);
 	});
@@ -302,7 +302,7 @@ fn slash_tip_works() {
 		assert_eq!(Balances::free_balance(0), 88);
 
 		let h = tip_hash();
-		assert_eq!(last_event(), RawEvent::NewTip(h));
+		assert_eq!(last_event(), TipsEvent::NewTip(h).into());
 
 		// can't remove from any origin
 		assert_noop!(
@@ -312,7 +312,7 @@ fn slash_tip_works() {
 
 		// can remove from root.
 		assert_ok!(TipsModTestInst::slash_tip(Origin::root(), h.clone()));
-		assert_eq!(last_event(), RawEvent::TipSlashed(h, 0, 12));
+		assert_eq!(last_event(), TipsEvent::TipSlashed(h, 0, 12).into());
 
 		// tipper slashed
 		assert_eq!(Balances::reserved_balance(0), 0);

@@ -173,7 +173,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	t.into()
 }
 
-fn last_event() -> RawEvent<u64, u128, H256> {
+fn last_event<T: Config>() -> Event {
 	System::events().into_iter().map(|r| r.event)
 		.filter_map(|e| {
 			if let Event::TipsModTestInst(inner) = e { Some(inner) } else { None }

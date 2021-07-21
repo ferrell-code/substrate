@@ -54,8 +54,8 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-mod tests;
 mod benchmarking;
+mod tests;
 pub mod weights;
 
 use sp_std::prelude::*;
@@ -488,9 +488,9 @@ impl<T: Config> Pallet<T> {
 					if m < a {
 						continue
 					} else {
-						break true;
+						break true
 					}
-				}
+				},
 			}
 		});
 	}
@@ -499,7 +499,10 @@ impl<T: Config> Pallet<T> {
 	///
 	/// Up to three balance operations.
 	/// Plus `O(T)` (`T` is Tippers length).
-	fn payout_tip(hash: T::Hash, tip: OpenTip<T::AccountId, BalanceOf<T>, T::BlockNumber, T::Hash>) {
+	fn payout_tip(
+		hash: T::Hash,
+		tip: OpenTip<T::AccountId, BalanceOf<T>, T::BlockNumber, T::Hash>,
+	) {
 		let mut tips = tip.tips;
 		Self::retain_active_tips(&mut tips);
 		tips.sort_by_key(|i| i.1);
@@ -557,16 +560,12 @@ impl<T: Config> Pallet<T> {
 			T::Hash,
 			OldOpenTip<T::AccountId, BalanceOf<T>, T::BlockNumber, T::Hash>,
 			Twox64Concat,
-		>(b"Treasury", b"Tips").drain()
+		>(b"Treasury", b"Tips")
+		.drain()
 		{
-
 			let (finder, deposit, finders_fee) = match old_tip.finder {
-				Some((finder, deposit)) => {
-					(finder, deposit, true)
-				},
-				None => {
-					(T::AccountId::default(), Zero::zero(), false)
-				},
+				Some((finder, deposit)) => (finder, deposit, true),
+				None => (T::AccountId::default(), Zero::zero(), false),
 			};
 			let new_tip = OpenTip {
 				reason: old_tip.reason,
@@ -575,7 +574,7 @@ impl<T: Config> Pallet<T> {
 				deposit,
 				closes: old_tip.closes,
 				tips: old_tip.tips,
-				finders_fee
+				finders_fee,
 			};
 			Tips::<T>::insert(hash, new_tip)
 		}
